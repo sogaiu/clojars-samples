@@ -1,14 +1,11 @@
 {:min-bb-version "0.4.0"
  :paths ["conf"
          "script"]
- :tasks {:requires ([babashka.fs :as fs]
-                    [conf :as cnf])
-         ;;
-         :enter (when (System/getenv "VERBOSE")
+ :tasks {:enter (when (System/getenv "VERBOSE")
                   (println "Entering:" (:name (current-task))))
          :leave (when (System/getenv "VERBOSE")
                   (println "Leaving:" (:name (current-task))))
-         ;; Clojars
+         ;; tasks
          gen-clojars-jar-list
          {:doc "Make Clojars jars list"
           :task gen-clojars-jar-list/-main}
