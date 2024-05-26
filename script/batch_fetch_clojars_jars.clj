@@ -6,14 +6,20 @@
 
 (def default-n 10)
 
-;; XXX: duplicate code
+(def default-batch-size 100)
+
+(def curl-rate "30/m")
+
+(def curl-max-time "60")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (def skip-urls
   (do
     (when (not (fs/exists? cnf/clojars-skip-urls))
       (spit cnf/clojars-skip-urls ""))
     (set (fs/read-all-lines (fs/file cnf/clojars-skip-urls)))))
 
-;; XXX: duplicate code
 (defn skip-url?
   [url]
   (or (skip-urls url)
@@ -45,6 +51,46 @@
                                             "--output " jar-path "\n\n"))
                             {:append true})))))))
 
+(defn fetch-urls
+  [rdr n]
+  (let [counter (atom n)
+        urls (atom [])]
+    ;; try to collect enough urls
+    (doseq [url (line-seq rdr)
+            :while (pos? @counter)]
+      (when (and (uri? (java.net.URI. url))
+                 (not (skip-url? url)))
+        (when-let [[container-path jar-name] (parse-url url)]
+          (let [jar-path
+                (str cnf/clojars-jars-root "/" container-path "/" jar-name)]
+            ;; XXX: could fetching have failed without cleaning up the jar?
+            (when-not (fs/exists? jar-path)
+              (swap! urls conj url)
+              (swap! counter dec))))))
+    (when cnf/verbose (println "Collected" (count @urls) "urls"))
+    ;; make the curl file and ask curl to fetch using it
+    (let [curl-file (fs/create-temp-file)
+          _ (fs/delete-on-exit curl-file)
+          _ (write-curl-file! @urls curl-file)]
+      (if (zero? (fs/size curl-file))
+        (println "Empty curl file, not invoking curl")
+        (let [start-time (System/currentTimeMillis)
+              p (proc/process "curl"
+                              "--rate" curl-rate
+                              "--max-time" curl-max-time
+                              "--fail-early" ;; want to stop at failures
+                              "--config" (str curl-file))
+              exit-code (:exit @p)
+              duration (- (System/currentTimeMillis) start-time)]
+          ;; guarded with this because if curl-file is big, don't
+          ;; want to see it
+          (when cnf/verbose
+            (when-not (zero? exit-code)
+              (println (slurp (fs/file curl-file)))))
+          (println "Processed in" duration "ms"
+                   "with exit code:" exit-code)
+          duration)))))
+
 (defn -main
   [& _args]
   (when (not (fs/exists? cnf/clojars-jars-root))
@@ -60,38 +106,24 @@
                            (first *command-line-args*))
                   (System/exit 1))))
           do-all (= -1 n)
-          counter (atom n)
-          urls (atom [])]
-      ;; try to collect enough urls
-      (doseq [url (line-seq rdr)
-              :while (or do-all (pos? @counter))]
-        (when (and (uri? (java.net.URI. url))
-                   (not (skip-url? url)))
-          (when-let [[container-path jar-name] (parse-url url)]
-            (let [jar-path
-                  (str cnf/clojars-jars-root "/" container-path "/" jar-name)]
-              ;; XXX: could fetching have failed without cleaning up the jar?
-              (when-not (fs/exists? jar-path)
-                (swap! urls conj url)
-                (swap! counter dec))))))
-      (when cnf/verbose (println "Collected" (count @urls) "urls"))
-      ;; make the curl file and ask curl to fetch using it
-      (let [curl-file (fs/create-temp-file)
-            _ (fs/delete-on-exit curl-file)
-            _ (write-curl-file! @urls curl-file)]
-        (if (zero? (fs/size curl-file))
-          (println "Empty curl file, not invoking curl")
-          (let [start-time (System/currentTimeMillis)
-                p (proc/process "curl"
-                                "--fail-early" ;; want to stop at failures
-                                "--config" (str curl-file))
-                exit-code (:exit @p)
-                duration (- (System/currentTimeMillis) start-time)]
-            ;; guarded with this because if curl-file is big, don't
-            ;; want to see it
-            (when cnf/verbose
-              (when-not (zero? exit-code)
-                (println (slurp (fs/file curl-file)))))
-            (println "Processed in" duration "ms"
-                     "with exit code:" exit-code)))))))
+          ;; XXX: currently only fetches multiples of batch-size
+          batch-size (if (pos? n)
+                       (min n default-batch-size)
+                       default-batch-size)]
+      (let [[fetch-total dur-total]
+            (loop [duration (fetch-urls rdr batch-size)
+                   fetch-acc batch-size
+                   dur-acc duration]
+              (println "URLs so far:" fetch-acc)
+              (println "Duration so far:" dur-acc "ms")
+              (flush)
+              (if (or (nil? duration)
+                      (and (not do-all)
+                           (>= fetch-acc n)))
+                [fetch-acc dur-acc]
+                (recur (fetch-urls rdr batch-size)
+                       (+ fetch-acc batch-size)
+                       (+ dur-acc duration))))]
+        (println "Fetched:" fetch-total "urls"
+                 "in:" dur-total "ms")))))
 
