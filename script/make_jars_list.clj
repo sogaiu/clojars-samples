@@ -1,4 +1,4 @@
-(ns gen-clojars-jar-list
+(ns make-jars-list
   (:require [babashka.fs :as fs]
             [babashka.process :as proc]
             [clojure.edn :as ce]

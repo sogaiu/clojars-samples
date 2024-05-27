@@ -6,14 +6,14 @@
          :leave (when (System/getenv "VERBOSE")
                   (println "Leaving:" (:name (current-task))))
          ;; tasks
-         gen-clojars-jar-list
+         make-jars-list
          {:doc "Make Clojars jars list"
-          :task gen-clojars-jar-list/-main}
-         batch-fetch-clojars-jars
-         {:doc "Batch fetch some Clojars jars"
-          :depends [gen-clojars-jar-list]
-          :task batch-fetch-clojars-jars/-main}
-         extract-clojars-jars
+          :task make-jars-list/-main}
+         fetch-jars
+         {:doc "Fetch some Clojars jars"
+          :depends [make-jars-list]
+          :task fetch-jars/-main}
+         extract-jars
          {:doc "Extract content from Clojars jars"
-          :task extract-clojars-jars/-main}
+          :task extract-jars/-main}
          }}

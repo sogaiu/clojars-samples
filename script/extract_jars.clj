@@ -1,4 +1,4 @@
-(ns extract-clojars-jars
+(ns extract-jars
   (:require [babashka.fs :as fs]
             [babashka.process :as proc]
             [clojure.java.io :as cji]
@@ -49,7 +49,7 @@
                   (catch Exception e
                     (fs/delete-tree dest-dir)
                     (println "Problem unzipping jar:" jar-path)
-                    (println "Exception:" (.getMessage e))))))))
+                    #_(println "Exception:" e)))))))
         ;; report summary
         (println "took" (- (System/currentTimeMillis) start-time) "ms"
                  "to unzip" @counter "jar files")))))
