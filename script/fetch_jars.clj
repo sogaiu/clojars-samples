@@ -46,6 +46,7 @@
 (defn fetch-urls
   [rdr n]
   (let [urls (collect-urls rdr n)
+        fetched (atom 0)
         probs (atom [])]
     (if (empty? @urls)
       nil
@@ -59,34 +60,50 @@
               (try
                 (cji/copy (:body (hc/get url {:as :stream}))
                           (cji/file jar-path))
+                (swap! fetched inc)
                 (catch Exception e
                   (println url)
                   (println e)
                   (println)
                   (swap! probs conj url))))))
         [(- (System/currentTimeMillis) start-time)
-         probs]))))
+         @fetched
+         @probs]))))
+
+(defn num-to-fetch
+  []
+  (if (empty? *command-line-args*)
+    default-n
+    (try
+      (Integer/parseInt (first *command-line-args*))
+      (catch Exception e
+        (println "Failed to parse as integer:"
+                 (first *command-line-args*))
+        nil))))
 
 (defn -main
   [& _args]
   (when (not (fs/exists? cnf/clojars-jars-root))
     (fs/create-dir cnf/clojars-jars-root))
-  (with-open [rdr (cji/reader cnf/clojars-jar-list-path)]
-    ;; n <= -1 means to fetch all remaining
-    (let [n (if (empty? *command-line-args*)
-              default-n
-              (try
-                (Integer/parseInt (first *command-line-args*))
-                (catch Exception e
-                  (println "Failed to parse as integer:"
-                           (first *command-line-args*))
-                  (System/exit 1))))]
-      (when (zero? n)
+  ;; n <= -1 means to fetch all remaining
+  (let [n (num-to-fetch)]
+    (cond
+      (nil? n)
+      (do
+        (println "Please specify a whole number of jars to fetch")
+        (System/exit 1))
+      ;;
+      (zero? n)
+      (do
         (println "Ok, if you say so.")
-        (System/exit 0))
-      (when-let [[duration probs] (fetch-urls rdr n)]
-        (when (not (empty? @probs))
-          (println "Encountered some problems")
-          (println @probs))
-        (println "Took:" duration "ms")))))
+        (System/exit 0)))
+    (with-open [rdr (cji/reader cnf/clojars-jar-list-path)]
+      (if-let [[duration fetched probs] (fetch-urls rdr n)]
+        (do
+          (when (not (empty? probs))
+            (println "Encountered some problems")
+            (println probs))
+          (println "Took:" duration "ms"
+                   "fetching" fetched "jars"))
+        (println "Did not find any urls to fetch.")))))
 
