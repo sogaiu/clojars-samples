@@ -15,7 +15,6 @@
 (defn skip-url?
   [url]
   (or (skip-urls url)
-      ;; XXX: could also remove from latest-release-jar-urls.txt file?
       (re-matches #"^.*lein-template.*" url)))
 
 (defn parse-url
