@@ -96,6 +96,7 @@ https://repo.clojars.org/org/clojars/paraseba/ring/0.2.0/ring-0.2.0.jar
 https://repo.clojars.org/org/clojars/rmoehn/grenada-lib/0.24.2/grenada-lib-0.24.2.jar
 https://repo.clojars.org/org/clojars/stoupin/cassiope-supplier/cassiope-parent/0.1.5/cassiope-parent-0.1.5.jar
 https://repo.clojars.org/org/clojars/tcrawley/deploytest/0.4.0/deploytest-0.4.0.jar
+https://repo.clojars.org/org/clojars/top20/gllue-sdk/0.4.0/gllue-sdk-0.4.0.jar
 https://repo.clojars.org/org/sift/sift/1.2.0/sift-1.2.0.jar
 https://repo.clojars.org/org/trpr/trooper/2.0.2/trooper-2.0.2.jar
 https://repo.clojars.org/org/typedclojure/pom.typed/1.0.32/pom.typed-1.0.32.jar
