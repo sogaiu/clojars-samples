@@ -325,8 +325,8 @@
         (System/exit 1))))
   ;; if there is a feed.clj.gz, uncompress it
   (when (fs/exists? cnf/feed-clj-gz-path)
+    (println "Uncompressing feed.clj.gz...")
     (try
-      (println "Uncompressing feed.clj.gz...")
       ;; XXX: not cross-platform?
       ;; using gzip instead of gunzip works better in more environments
       (let [p (proc/process {:dir "data"}
@@ -347,7 +347,9 @@
                       (sort
                        (keep feed-map->jar-url
                              (ce/read-string
-                              (str "[" (slurp (fs/file cnf/feed-clj-path)) "]")))))
+                              (str "["
+                                   (slurp (fs/file cnf/feed-clj-path))
+                                   "]")))))
       (catch Exception e
         (println "Problem writing jars list:" e)
         (System/exit 1)))))
