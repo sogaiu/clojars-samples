@@ -28,7 +28,8 @@
                           (fn [path _]
                             (when (= "jar" (fs/extension path))
                               (swap! jar-paths conj path))
-                            :continue)})
+                            :continue)
+                          :follow-links true})
       (println "found"
                (count @jar-paths) "jar files"
                "in" (- (System/currentTimeMillis) start-time) "ms")
