@@ -44,7 +44,9 @@
               (when-not (fs/exists? dest-dir)
                 (fs/create-dirs dest-dir)
                 (try
-                  (fs/unzip (fs/file jar-path) dest-dir)
+                  (fs/unzip (fs/file jar-path) dest-dir
+                            ;; XXX: better than nothing but not ideal
+                            {:replace-existing true})
                   (swap! counter inc)
                   (catch Exception e
                     (fs/delete-tree dest-dir)
