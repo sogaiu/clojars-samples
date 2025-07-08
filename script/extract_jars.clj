@@ -158,7 +158,14 @@
                   (catch Exception e
                     (fs/delete-tree dest-dir)
                     (println "Problem unzipping jar:" jar-path)
-                    #_(println "Exception:" e)))))))
+                    #_(println "Exception:" e))))
+              ;; delete empty directories
+              (fs/walk-file-tree dest-dir
+                                 {:post-visit-dir
+                                  (fn [dir-path ex]
+                                    (when (empty? (fs/list-dir dir-path))
+                                      (fs/delete dir-path))
+                                    :continue)}))))
         ;; report summary
         (println "took" (- (System/currentTimeMillis) start-time) "ms"
                  "to unzip" @counter "jar files")))))
